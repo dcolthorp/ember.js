@@ -1,6 +1,9 @@
 module("Ember.Routable");
 
-var locationStub = {};
+var locationStub = {
+  getURL: function() {},
+  setURL: function() {}
+};
 
 test("it should have its updateRoute method called when it is entered", function() {
   expect(2);
@@ -28,28 +31,62 @@ test("it should have its updateRoute method called when it is entered", function
   router.send('ready');
 });
 
-test("when you call `route` on the Router, it calls it on the current state", function() {
+test("when you call `route` on the Router with an absolute path, it calls it on the topmost routable State", function() {
   expect(2);
-
-  var state = Ember.State.create({
-    routePath: function(manager, path) {
-      equal(path, 'hookers/and/blow', "correct path is passed to route");
-    }
-  });
 
   var router = Ember.Router.create({
     location: locationStub,
     start: Ember.State.create({
       ready: function(manager) {
-        manager.goToState('initial');
+        manager.goToState('parent.child');
       },
 
-      initial: state
+      parent: Ember.State.create({
+        route: "/",
+
+        child: Ember.State.create({
+          route: "/child"
+        })
+      }),
+
+      routePath: function(manager, path) {
+        equal(path, 'hookers/and/blow', "correct path is passed to router");
+      }
     })
+
   });
 
   router.send('ready');
   router.route('/hookers/and/blow');
+  router.route('/hookers/and/blow');
+});
+
+test("when you call `route` on the Router with a relative path, it calls it on the current state", function() {
+  expect(2);
+
+  var router = Ember.Router.create({
+    location: locationStub,
+    start: Ember.State.create({
+      ready: function(manager) {
+        manager.goToState('parent.child');
+      },
+
+      parent: Ember.State.create({
+        route: "/",
+
+        child: Ember.State.create({
+          route: "/child",
+          routePath: function(manager, path) {
+            equal(path, 'hookers/and/blow', "correct path is passed to router");
+          }
+        })
+      })
+    })
+
+  });
+
+  router.send('ready');
+  router.route('hookers/and/blow');
   router.route('hookers/and/blow');
 });
 
@@ -100,30 +137,6 @@ test("a RouteMatcher generates routes with dynamic segments", function() {
 
   url = matcher.generate({ id: 1, first_name: "Yehuda" });
   equal(url, "foo/1/Yehuda");
-});
-
-test("route repeatedly descends into a nested hierarchy", function() {
-  var state = Ember.State.create({
-    fooChild: Ember.State.create({
-      route: 'foo',
-
-      barChild: Ember.State.create({
-        route: 'bar',
-
-        bazChild: Ember.State.create({
-          route: 'baz'
-        })
-      })
-    })
-  });
-
-  var router = Ember.Router.create({
-    start: state
-  });
-
-  router.route("/foo/bar/baz");
-
-  equal(router.getPath('currentState.path'), 'start.fooChild.barChild.bazChild');
 });
 
 test("route repeatedly descends into a nested hierarchy", function() {
