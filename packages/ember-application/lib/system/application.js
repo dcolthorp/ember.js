@@ -195,7 +195,7 @@ Ember.Application.reopenClass({
 Ember.Application.registerInjection(function(app, router, property) {
   if (!/^[A-Z].*Controller$/.test(property)) { return; }
 
-  var name = property[0].toLowerCase() + property.substr(1),
+  var name = property.charAt(0).toLowerCase() + property.substr(1),
       controller = app[property].create();
 
   router.set(name, controller);
